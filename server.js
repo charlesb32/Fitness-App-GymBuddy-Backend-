@@ -52,6 +52,34 @@ mongoose
 
 app.use(express.json()); // parse JSON data from requests
 app.use(cors()); // enable CORS for all routes//function that sees if an email already exists for a user
+
+const verifyJWT = (req, res, next) => {
+  // console.log(
+  //   "HEADERS : " + req.headers["x-access-token"] + "------------------"
+  // );
+  const tok = req.headers["x-access-token"]?.split(" ")[1];
+  if (tok) {
+    jwt.verify(tok, secretKey, (err, decoded) => {
+      if (err)
+        return res.json({
+          isLoggedIn: false,
+          message: "Failed to Authenticate",
+        });
+      console.log(decoded);
+      req.user = {};
+      req.user.id = decoded.id;
+      req.user.email = decoded.email;
+      next();
+    });
+  } else {
+    res.json({ message: "Incorrect Token Given", isLoggedIn: false });
+  }
+};
+
+//route to get the user based on JWT
+app.get("/getUser", verifyJWT, (req, res) => {
+  res.json({ isLoggedIn: true, user: req.user });
+});
 const userAlreadyExists = async (userEmailToCheck) => {
   // console.log(userEmailToCheck);
   try {
