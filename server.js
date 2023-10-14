@@ -15,11 +15,25 @@ const userSchema = new mongoose.Schema({
   // username: String,
   email: String,
   password: String,
-  workoutIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Workout" }],
+  planIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Plan" }],
   firstname: String,
   lastname: String,
 });
 
+const planSchema = new mongoose.Schema({
+  age: Number,
+  gender: String,
+  heightFeet: Number,
+  heightInches: Number,
+  weight: Number,
+  frequency: Number,
+  goal: String,
+  workoutId: { type: mongoose.Schema.Types.ObjectId, ref: "Workout" },
+  dailyCalories: String,
+  dailyCarbs: String,
+  dailyFats: String,
+  dailyProtein: String,
+});
 const workoutSchema = new mongoose.Schema({
   planName: String,
   daysPerWeek: Number,
@@ -29,6 +43,7 @@ const workoutSchema = new mongoose.Schema({
 // Create the model
 const userModel = mongoose.model("User", userSchema, "User");
 const workoutModel = mongoose.model("Workout", workoutSchema, "Workout");
+const planModel = mongoose.model("Plan", planSchema, "Plan");
 //info to connect to MongoDB
 
 const username = "charlesb32";
@@ -69,6 +84,8 @@ const verifyJWT = (req, res, next) => {
       req.user = {};
       req.user.id = decoded.id;
       req.user.email = decoded.email;
+      req.user.firstname = decoded.firstname;
+      req.user.lastname = decoded.lastname;
       next();
     });
   } else {
@@ -138,22 +155,24 @@ app.post("/addUser", async (req, res) => {
           password: encryptedPassword,
           firstname: user.firstname,
           lastname: user.lastname,
-          workoutIds: [],
+          planIds: [],
         });
 
         // Save the new user to the database
         await newUser.save();
       } else {
-        console.log("USER EXISTS ALREADY");
+        return res
+          .status(400)
+          .json({ message: "User with this email already exists" });
       }
     } else {
-      console.log("passwords dont match");
+      return res.status(400).json({ message: "Passwords do not match" });
     }
     // Send a success response to the client
-    res.status(200).json({ message: "User added successfully" });
+    return res.status(200).json({ message: "User added successfully" });
   } catch (error) {
     // Handle any server-side error
-    res.status(500).json({ message: "Server Error" });
+    return res.status(500).json({ message: "Server Error" });
   }
 });
 
@@ -173,9 +192,12 @@ app.post("/login", (req, res) => {
           .compare(userLoggingIn.password, dbUser.password)
           .then((isCorrect) => {
             if (isCorrect) {
+              // console.log("FASKLFSJAKLFJAKSL");
               const payload = {
                 email: dbUser.email,
                 id: dbUser._id,
+                firstname: dbUser.firstname,
+                lastname: dbUser.lastname,
               };
               jwt.sign(
                 payload,
@@ -194,8 +216,9 @@ app.post("/login", (req, res) => {
                 }
               );
             } else {
+              console.log("HERE");
               return res
-                .status(401)
+                .status(400)
                 .json({ message: "Invalid Username or Password" });
             }
           })
