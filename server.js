@@ -1,50 +1,20 @@
 const calcMacros = require("./calculateMacros");
+const User = require("./user");
+const Workout = require("./workout");
+const Plan = require("./plan");
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-// const userSchema = require("./user");
 const app = express();
 const port = 4000; // set the local port you want to use
+
 app.listen(port, () => {
   console.log(`Server is listening on port ${port}`);
 });
 const secretKey = "YourSecretKey";
-// Define your schema before creating the model
-const userSchema = new mongoose.Schema({
-  // username: String,
-  email: String,
-  password: String,
-  planIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Plan" }],
-  firstname: String,
-  lastname: String,
-});
 
-const planSchema = new mongoose.Schema({
-  age: Number,
-  gender: String,
-  heightFeet: Number,
-  heightInches: Number,
-  weight: Number,
-  frequency: Number,
-  goal: String,
-  workoutId: { type: mongoose.Schema.Types.ObjectId, ref: "Workout" },
-  dailyCalories: String,
-  dailyCarbs: String,
-  dailyFats: String,
-  dailyProtein: String,
-});
-const workoutSchema = new mongoose.Schema({
-  planName: String,
-  days_per_Week: Number,
-  workouts: [[String]], // A two-dimensional array for exercise details
-});
-
-// Create the model
-const userModel = mongoose.model("User", userSchema, "User");
-const workoutModel = mongoose.model("Workout", workoutSchema, "Workout");
-const planModel = mongoose.model("Plan", planSchema, "Plan");
 //info to connect to MongoDB
 
 const username = "charlesb32";
@@ -70,9 +40,6 @@ app.use(express.json()); // parse JSON data from requests
 app.use(cors()); // enable CORS for all routes//function that sees if an email already exists for a user
 
 const verifyJWT = (req, res, next) => {
-  // console.log(
-  //   "HEADERS : " + req.headers["x-access-token"] + "------------------"
-  // );
   const tok = req.headers["x-access-token"]?.split(" ")[1];
   if (tok) {
     jwt.verify(tok, secretKey, (err, decoded) => {
@@ -81,7 +48,7 @@ const verifyJWT = (req, res, next) => {
           isLoggedIn: false,
           message: "Failed to Authenticate",
         });
-      console.log(decoded);
+      // console.log(decoded);
       req.user = {};
       req.user.id = decoded.id;
       req.user.email = decoded.email;
@@ -101,41 +68,10 @@ app.get("/getUser", verifyJWT, (req, res) => {
 const userAlreadyExists = async (userEmailToCheck) => {
   // console.log(userEmailToCheck);
   try {
-    const user = await userModel.findOne({ email: userEmailToCheck });
+    const user = await User.findOne({ email: userEmailToCheck });
     return !!user;
   } catch (err) {
     console.log(err);
-  }
-};
-
-//finds a workout plan that matches the number of days per week the person wants to go to the gym
-const findWorkoutPlan = async (daysPerWeek) => {
-  try {
-    const workoutPlan = await workoutModel.findOne({ daysPerWeek });
-    return workoutPlan;
-  } catch (error) {
-    throw error;
-  }
-};
-
-//gets user workouts by userID
-const getUserWorkouts = async (userId) => {
-  try {
-    // Find the user by their ID
-    const user = await userModel.findById(userId);
-
-    if (!user) {
-      throw new Error("User not found");
-    }
-
-    // Retrieve workouts based on the user's workoutIds
-    const userWorkouts = await workoutModel.find({
-      _id: { $in: user.workoutIds },
-    });
-
-    return userWorkouts;
-  } catch (error) {
-    throw error;
   }
 };
 
@@ -143,7 +79,7 @@ const getUserWorkouts = async (userId) => {
 app.post("/addUser", async (req, res) => {
   try {
     console.log(req.body.userData);
-    user = req.body.userData;
+    const user = req.body.userData;
     if (user.password === user.confirmPassword) {
       console.log("passwords match");
       const userExists = await userAlreadyExists(user.email);
@@ -151,7 +87,7 @@ app.post("/addUser", async (req, res) => {
       if (!userExists) {
         encryptedPassword = await bcrypt.hash(user.password, 10);
         console.log(encryptedPassword);
-        const newUser = new userModel({
+        const newUser = new User({
           email: user.email,
           password: encryptedPassword,
           firstname: user.firstname,
@@ -177,11 +113,11 @@ app.post("/addUser", async (req, res) => {
   }
 });
 
+//route for logging user in
 app.post("/login", (req, res) => {
   const userLoggingIn = req.body;
   console.log(userLoggingIn);
-  userModel
-    .findOne({ email: userLoggingIn.email })
+  User.findOne({ email: userLoggingIn.email })
     .then((dbUser) => {
       if (!dbUser) {
         return res
@@ -237,8 +173,8 @@ app.post("/login", (req, res) => {
 app.get("/db", async (req, res) => {
   try {
     // Use the Mongoose model to retrieve all documents from the collection
-    const userData = await userModel.find({});
-    const workoutData = await workoutModel.find({});
+    const userData = await User.find({});
+    const workoutData = await Workout.find({});
     console.log(userData);
     // Return the data as a JSON response
     // res.json(userData);
@@ -249,19 +185,7 @@ app.get("/db", async (req, res) => {
   }
 });
 
-app.get("/userWorkouts/:userId", async (req, res) => {
-  const userId = req.params.userId;
-
-  try {
-    const userWorkouts = await getUserWorkouts(userId);
-
-    res.json(userWorkouts);
-  } catch (error) {
-    res.status(404).json({ message: error.message });
-  }
-});
-
-// In your server.js file
+// makes plan and adds that plan to the user
 app.put("/addPlanToUser", async (req, res) => {
   try {
     const formData = req.body.userData;
@@ -279,13 +203,12 @@ app.put("/addPlanToUser", async (req, res) => {
 
     const diet = calcMacros(formData);
     // console.log(diet);
-    workoutModel
-      .findOne({ days_per_week: formData.frequency })
+    Workout.findOne({ days_per_week: formData.frequency })
       .then(async (workout) => {
         if (workout) {
           // console.log("HERE");
           const wId = workout._id; // The _id field contains the ObjectId of the workout
-          const plan = new planModel({
+          const plan = new Plan({
             ...formData, // Spread the formData object
             workoutId: wId,
             dailyCalories: Math.round(diet.dailyCalories),
@@ -297,7 +220,7 @@ app.put("/addPlanToUser", async (req, res) => {
           console.log(plan);
           const addedPlan = await plan.save();
           // console.log(addedPlan._id);
-          const updatedUser = await userModel.findOneAndUpdate(
+          const updatedUser = await User.findOneAndUpdate(
             { _id: userId },
             { $push: { planIds: addedPlan._id } },
             { new: true } // Return the updated user document
@@ -314,6 +237,26 @@ app.put("/addPlanToUser", async (req, res) => {
       });
 
     res.status(200).json({ message: "Workout plan assigned successfully" });
+  } catch (error) {
+    // Handle any server-side error
+    res.status(500).json({ message: "Server Error" });
+  }
+});
+
+//get all plans that a user had based on userID
+app.get("/getPlans/:userId", async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    // console.log(userId);
+    const user = await User.findOne({ _id: userId });
+    // console.log(user);
+    const planIds = user.planIds;
+    // console.log(planIds);
+    const plans = await Plan.find({ _id: { $in: planIds } }).populate(
+      "workoutId"
+    );
+    // console.log(plans);
+    res.status(200).json(plans);
   } catch (error) {
     // Handle any server-side error
     res.status(500).json({ message: "Server Error" });
