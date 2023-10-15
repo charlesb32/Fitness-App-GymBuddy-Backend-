@@ -1,3 +1,4 @@
+const calcMacros = require("./calculateMacros");
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -36,7 +37,7 @@ const planSchema = new mongoose.Schema({
 });
 const workoutSchema = new mongoose.Schema({
   planName: String,
-  daysPerWeek: Number,
+  days_per_Week: Number,
   workouts: [[String]], // A two-dimensional array for exercise details
 });
 
@@ -261,17 +262,57 @@ app.get("/userWorkouts/:userId", async (req, res) => {
 });
 
 // In your server.js file
-app.put("/addWorkoutToUser", async (req, res) => {
+app.put("/addPlanToUser", async (req, res) => {
   try {
-    console.log(req.params.userData, req.body);
-    const { userId } = req.params;
-    const { workoutId } = req.body;
+    const formData = req.body.userData;
+    const userId = req.body.currUserId;
+    console.log(userId);
+    const { age, gender, heightFeet, heightInches, weight, frequency, goal } =
+      formData;
 
-    // Update the user's data with the assigned workoutId (example below)
-    // Replace this with your actual database update logic
-    // userModel.findByIdAndUpdate(userId, { $push: { workoutIds: workoutId } });
+    // Convert values to numbers
+    formData.age = Number(age);
+    formData.heightFeet = Number(heightFeet);
+    formData.heightInches = Number(heightInches);
+    formData.weight = Number(weight);
+    formData.frequency = Number(frequency);
 
-    // Send a success response to the client
+    const diet = calcMacros(formData);
+    // console.log(diet);
+    workoutModel
+      .findOne({ days_per_week: formData.frequency })
+      .then(async (workout) => {
+        if (workout) {
+          // console.log("HERE");
+          const wId = workout._id; // The _id field contains the ObjectId of the workout
+          const plan = new planModel({
+            ...formData, // Spread the formData object
+            workoutId: wId,
+            dailyCalories: Math.round(diet.dailyCalories),
+            dailyCarbs: Math.round(diet.dailyCarbsInGrams),
+            dailyFats: Math.round(diet.dailyFatsInGrams),
+            dailyProtein: Math.round(diet.dailyProteinInGrams),
+          });
+
+          console.log(plan);
+          const addedPlan = await plan.save();
+          // console.log(addedPlan._id);
+          const updatedUser = await userModel.findOneAndUpdate(
+            { _id: userId },
+            { $push: { planIds: addedPlan._id } },
+            { new: true } // Return the updated user document
+          );
+          // You can now use the workoutId as needed
+        } else {
+          console.log("No matching workout found for the specified frequency.");
+          // Handle the case when no matching workout is found
+        }
+      })
+      .catch((err) => {
+        console.error("Error finding workout:", err);
+        res.status(500).json({ message: "Server Error" });
+      });
+
     res.status(200).json({ message: "Workout plan assigned successfully" });
   } catch (error) {
     // Handle any server-side error
