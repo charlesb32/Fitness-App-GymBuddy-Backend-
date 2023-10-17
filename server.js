@@ -225,6 +225,10 @@ app.put("/addPlanToUser", async (req, res) => {
             { $push: { planIds: addedPlan._id } },
             { new: true } // Return the updated user document
           );
+          const activePlanIndex = updatedUser.planIds.length - 1;
+          updatedUser.activePlanIndex = activePlanIndex;
+          await updatedUser.save();
+
           // You can now use the workoutId as needed
         } else {
           console.log("No matching workout found for the specified frequency.");
@@ -262,3 +266,35 @@ app.get("/getPlans/:userId", async (req, res) => {
     res.status(500).json({ message: "Server Error" });
   }
 });
+
+app.put("/setActivePlanIndex", async (req, res) => {
+  try {
+    const userId = req.body.currUserId;
+    const index = req.body.index;
+    console.log(userId, index);
+    // Update the user's activePlanIndex
+    const updatedUser = await User.findOneAndUpdate(
+      { _id: userId },
+      { activePlanIndex: Number(index) },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({ message: "Active plan updated successfully" });
+  } catch (error) {
+    // Handle any server-side error
+    console.error("Error setting active plan:", error);
+    res.status(500).json({ message: "Server Error" });
+  }
+});
+
+// app.get("/getUser:/userId" , async (req, res) =>{
+//   try{
+//     const userId = req.params.userId
+//     const user = await User.findOne({_id: userId})
+//     res.status(200).json(user)
+//   }
+// })
