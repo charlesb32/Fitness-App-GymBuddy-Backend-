@@ -291,10 +291,12 @@ app.put("/setActivePlanIndex", async (req, res) => {
   }
 });
 
-// app.get("/getUser:/userId" , async (req, res) =>{
-//   try{
-//     const userId = req.params.userId
-//     const user = await User.findOne({_id: userId})
-//     res.status(200).json(user)
-//   }
-// })
+app.get("/getUserInfo/:userId", async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const user = await User.findOne({ _id: userId });
+    return res.status(200).json(user);
+  } catch (err) {
+    return res.status(404).json({ message: "User not found" });
+  }
+});
