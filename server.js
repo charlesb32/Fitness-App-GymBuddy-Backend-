@@ -129,7 +129,7 @@ app.post("/login", (req, res) => {
           .compare(userLoggingIn.password, dbUser.password)
           .then((isCorrect) => {
             if (isCorrect) {
-              // console.log("FASKLFSJAKLFJAKSL");
+              console.log("FASKLFSJAKLFJAKSL");
               const payload = {
                 email: dbUser.email,
                 id: dbUser._id,
@@ -146,6 +146,7 @@ app.post("/login", (req, res) => {
                       .status(500)
                       .json({ message: "Token generation error" });
                   }
+                  console.log("Sending Token");
                   return res.status(200).json({
                     message: "Success",
                     token: "Bearer " + token,
