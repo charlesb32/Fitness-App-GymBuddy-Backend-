@@ -30,7 +30,7 @@ mongoose
     }
   )
   .then(() => {
-    console.log("Connected 2 database");
+    console.log("Connected to database");
   })
   .catch((err) => {
     console.log("Error connecting to database:", err);
@@ -40,7 +40,7 @@ app.use(express.json()); // parse JSON data from requests
 app.use(cors()); // enable CORS for all routes//function that sees if an email already exists for a user
 
 const verifyJWT = (req, res, next) => {
-  const tok = req.headers["x-access-token"]?.split(" ")[1];
+  const tok = req.headers["x-access-token"]?.split(" ")[1]; //gets what is after "Bearer"
   if (tok) {
     jwt.verify(tok, secretKey, (err, decoded) => {
       if (err)
@@ -48,7 +48,6 @@ const verifyJWT = (req, res, next) => {
           isLoggedIn: false,
           message: "Failed to Authenticate",
         });
-      // console.log(decoded);
       req.user = {};
       req.user.id = decoded.id;
       req.user.email = decoded.email;
@@ -66,7 +65,6 @@ app.get("/getUser", verifyJWT, (req, res) => {
   res.json({ isLoggedIn: true, user: req.user });
 });
 const userAlreadyExists = async (userEmailToCheck) => {
-  // console.log(userEmailToCheck);
   try {
     const user = await User.findOne({ email: userEmailToCheck });
     return !!user;
@@ -86,7 +84,6 @@ app.post("/addUser", async (req, res) => {
       console.log(userExists);
       if (!userExists) {
         encryptedPassword = await bcrypt.hash(user.password, 10);
-        console.log(encryptedPassword);
         const newUser = new User({
           email: user.email,
           password: encryptedPassword,
@@ -105,10 +102,8 @@ app.post("/addUser", async (req, res) => {
     } else {
       return res.status(400).json({ message: "Passwords do not match" });
     }
-    // Send a success response to the client
     return res.status(200).json({ message: "User added successfully" });
   } catch (error) {
-    // Handle any server-side error
     return res.status(500).json({ message: "Server Error" });
   }
 });
@@ -123,13 +118,11 @@ app.post("/login", (req, res) => {
         return res
           .status(401)
           .json({ message: "Invalid Username or Password" });
-        // console.log("Invalid Username or Password");
       } else {
         bcrypt
           .compare(userLoggingIn.password, dbUser.password)
           .then((isCorrect) => {
             if (isCorrect) {
-              console.log("FASKLFSJAKLFJAKSL");
               const payload = {
                 email: dbUser.email,
                 id: dbUser._id,
@@ -176,9 +169,6 @@ app.get("/db", async (req, res) => {
     // Use the Mongoose model to retrieve all documents from the collection
     const userData = await User.find({});
     const workoutData = await Workout.find({});
-    console.log(userData);
-    // Return the data as a JSON response
-    // res.json(userData);
     res.json({ userData, workoutData });
   } catch (err) {
     console.error(err);
@@ -203,11 +193,9 @@ app.put("/addPlanToUser", async (req, res) => {
     formData.frequency = Number(frequency);
 
     const diet = calcMacros(formData);
-    // console.log(diet);
     Workout.findOne({ days_per_week: formData.frequency })
       .then(async (workout) => {
         if (workout) {
-          // console.log("HERE");
           const wId = workout._id; // The _id field contains the ObjectId of the workout
           const plan = new Plan({
             ...formData, // Spread the formData object
@@ -218,9 +206,7 @@ app.put("/addPlanToUser", async (req, res) => {
             dailyProtein: Math.round(diet.dailyProteinInGrams),
           });
 
-          console.log(plan);
           const addedPlan = await plan.save();
-          // console.log(addedPlan._id);
           const updatedUser = await User.findOneAndUpdate(
             { _id: userId },
             { $push: { planIds: addedPlan._id } },
@@ -229,11 +215,8 @@ app.put("/addPlanToUser", async (req, res) => {
           const activePlanIndex = updatedUser.planIds.length - 1;
           updatedUser.activePlanIndex = activePlanIndex;
           await updatedUser.save();
-
-          // You can now use the workoutId as needed
         } else {
           console.log("No matching workout found for the specified frequency.");
-          // Handle the case when no matching workout is found
         }
       })
       .catch((err) => {
@@ -243,7 +226,6 @@ app.put("/addPlanToUser", async (req, res) => {
 
     res.status(200).json({ message: "Workout plan assigned successfully" });
   } catch (error) {
-    // Handle any server-side error
     res.status(500).json({ message: "Server Error" });
   }
 });
@@ -252,18 +234,14 @@ app.put("/addPlanToUser", async (req, res) => {
 app.get("/getPlans/:userId", async (req, res) => {
   try {
     const userId = req.params.userId;
-    // console.log(userId);
     const user = await User.findOne({ _id: userId });
-    // console.log(user);
     const planIds = user.planIds;
-    // console.log(planIds);
+    // what populate is doing here: for each plan fetched, also fetch associated workoutId details. This implies a relationship between plans and workouts in the database schema by MongoDB's ObjectId references).
     const plans = await Plan.find({ _id: { $in: planIds } }).populate(
       "workoutId"
     );
-    // console.log(plans);
     res.status(200).json(plans);
   } catch (error) {
-    // Handle any server-side error
     res.status(500).json({ message: "Server Error" });
   }
 });
@@ -286,7 +264,6 @@ app.put("/setActivePlanIndex", async (req, res) => {
 
     res.status(200).json({ message: "Active plan updated successfully" });
   } catch (error) {
-    // Handle any server-side error
     console.error("Error setting active plan:", error);
     res.status(500).json({ message: "Server Error" });
   }
