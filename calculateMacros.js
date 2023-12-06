@@ -52,8 +52,8 @@ const calcMacros = ({
   }
 
   const carbs = (bmr * 0.45) / 4;
-  const protein = (bmr * 0.35) / 4;
-  const fats = (bmr * 0.2) / 9;
+  const protein = (bmr * 0.25) / 4;
+  const fats = (bmr * 0.3) / 9;
 
   console.log({
     dailyCalories: bmr,

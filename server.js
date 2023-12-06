@@ -64,6 +64,7 @@ const verifyJWT = (req, res, next) => {
 app.get("/getUser", verifyJWT, (req, res) => {
   res.json({ isLoggedIn: true, user: req.user });
 });
+
 const userAlreadyExists = async (userEmailToCheck) => {
   try {
     const user = await User.findOne({ email: userEmailToCheck });
@@ -276,5 +277,18 @@ app.get("/getUserInfo/:userId", async (req, res) => {
     return res.status(200).json(user);
   } catch (err) {
     return res.status(404).json({ message: "User not found" });
+  }
+});
+
+app.delete("/deletePlanById/:planId/:userId", async (req, res) => {
+  console.log("HERERERE");
+  try {
+    const planId = req.params.planId;
+    const userId = req.params.userId;
+    console.log(planId, userId);
+    await Plan.findByIdAndDelete(planId);
+    await User.findByIdAndUpdate(userId, { $pull: { planIds: planId } });
+  } catch (err) {
+    return res.status(404).json({ message: "Plan not found" });
   }
 });
