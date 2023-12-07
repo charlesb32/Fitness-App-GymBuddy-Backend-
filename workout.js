@@ -1,5 +1,5 @@
+//Workout schema
 const mongoose = require("mongoose");
-
 const workoutSchema = new mongoose.Schema({
   planName: String,
   days_per_Week: Number,

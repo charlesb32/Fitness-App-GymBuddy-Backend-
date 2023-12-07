@@ -1,3 +1,5 @@
+//contains all routes for backend
+
 const calcMacros = require("./calculateMacros");
 const User = require("./user");
 const Workout = require("./workout");
@@ -8,7 +10,7 @@ const cors = require("cors");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const app = express();
-const port = 4000; // set the local port you want to use
+const port = 4000;
 
 app.listen(port, () => {
   console.log(`Server is listening on port ${port}`);
@@ -16,11 +18,11 @@ app.listen(port, () => {
 const secretKey = "YourSecretKey";
 
 //info to connect to MongoDB
-
 const username = "charlesb32";
 const password = "GTnPX7g8bV44xU0p";
 const database = "GymBuddyDatabase";
 
+//connecting to mongoDB
 mongoose
   .connect(
     `mongodb+srv://${username}:${password}@firstcluster.sjcxaeq.mongodb.net/${database}?retryWrites=true&w=majority`,
@@ -39,6 +41,7 @@ mongoose
 app.use(express.json()); // parse JSON data from requests
 app.use(cors()); // enable CORS for all routes//function that sees if an email already exists for a user
 
+//verifies JWT token
 const verifyJWT = (req, res, next) => {
   const tok = req.headers["x-access-token"]?.split(" ")[1]; //gets what is after "Bearer"
   if (tok) {
@@ -65,6 +68,7 @@ app.get("/getUser", verifyJWT, (req, res) => {
   res.json({ isLoggedIn: true, user: req.user });
 });
 
+//returns if user already exists for error checking if an email is available for signup
 const userAlreadyExists = async (userEmailToCheck) => {
   try {
     const user = await User.findOne({ email: userEmailToCheck });
@@ -77,12 +81,9 @@ const userAlreadyExists = async (userEmailToCheck) => {
 //adds user to database
 app.post("/addUser", async (req, res) => {
   try {
-    console.log(req.body.userData);
     const user = req.body.userData;
     if (user.password === user.confirmPassword) {
-      console.log("passwords match");
       const userExists = await userAlreadyExists(user.email);
-      console.log(userExists);
       if (!userExists) {
         encryptedPassword = await bcrypt.hash(user.password, 10);
         const newUser = new User({
@@ -112,7 +113,6 @@ app.post("/addUser", async (req, res) => {
 //route for logging user in
 app.post("/login", (req, res) => {
   const userLoggingIn = req.body;
-  console.log(userLoggingIn);
   User.findOne({ email: userLoggingIn.email })
     .then((dbUser) => {
       if (!dbUser) {
@@ -140,7 +140,6 @@ app.post("/login", (req, res) => {
                       .status(500)
                       .json({ message: "Token generation error" });
                   }
-                  console.log("Sending Token");
                   return res.status(200).json({
                     message: "Success",
                     token: "Bearer " + token,
@@ -148,7 +147,6 @@ app.post("/login", (req, res) => {
                 }
               );
             } else {
-              console.log("HERE");
               return res
                 .status(400)
                 .json({ message: "Invalid Username or Password" });
@@ -182,7 +180,6 @@ app.put("/addPlanToUser", async (req, res) => {
   try {
     const formData = req.body.userData;
     const userId = req.body.currUserId;
-    console.log(userId);
     const { age, gender, heightFeet, heightInches, weight, frequency, goal } =
       formData;
 
@@ -247,11 +244,11 @@ app.get("/getPlans/:userId", async (req, res) => {
   }
 });
 
+//sets a users active plan index
 app.put("/setActivePlanIndex", async (req, res) => {
   try {
     const userId = req.body.currUserId;
     const index = req.body.index;
-    console.log(userId, index);
     // Update the user's activePlanIndex
     const updatedUser = await User.findOneAndUpdate(
       { _id: userId },
@@ -270,6 +267,7 @@ app.put("/setActivePlanIndex", async (req, res) => {
   }
 });
 
+//gets all user fields based on userID
 app.get("/getUserInfo/:userId", async (req, res) => {
   try {
     const userId = req.params.userId;
@@ -280,14 +278,15 @@ app.get("/getUserInfo/:userId", async (req, res) => {
   }
 });
 
+//deletes a plan for a user by planID and userID
 app.delete("/deletePlanById/:planId/:userId", async (req, res) => {
-  console.log("HERERERE");
   try {
     const planId = req.params.planId;
     const userId = req.params.userId;
-    console.log(planId, userId);
     await Plan.findByIdAndDelete(planId);
     await User.findByIdAndUpdate(userId, { $pull: { planIds: planId } });
+    // Send 'true' response to indicate success
+    return res.status(200).json(true);
   } catch (err) {
     return res.status(404).json({ message: "Plan not found" });
   }

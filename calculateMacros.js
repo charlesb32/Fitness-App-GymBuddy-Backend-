@@ -1,3 +1,4 @@
+//calculates macros for a user based on their stats
 const calcMacros = ({
   age,
   gender,
@@ -12,7 +13,6 @@ const calcMacros = ({
   heightInches = Number(heightInches);
   weight = Number(weight);
   frequency = Number(frequency);
-  // console.log(age, heightFeet, heightInches, weight, frequency);
   //Calc bmr
   let bmr = 0;
   if (gender === "Male") {
@@ -43,11 +43,7 @@ const calcMacros = ({
   //adjusting bmr for goal
   if (goal === "Cut") {
     bmr -= 200;
-  }
-  // else if(goal === 'Maintain'){
-
-  // }
-  else if (goal === "Bulk") {
+  } else if (goal === "Bulk") {
     bmr += 200;
   }
 
@@ -55,12 +51,6 @@ const calcMacros = ({
   const protein = (bmr * 0.25) / 4;
   const fats = (bmr * 0.3) / 9;
 
-  console.log({
-    dailyCalories: bmr,
-    dailyCarbsInGrams: carbs,
-    dailyProteinInGrams: protein,
-    dailyFatsInGrams: fats,
-  });
   return {
     dailyCalories: bmr,
     dailyCarbsInGrams: carbs,

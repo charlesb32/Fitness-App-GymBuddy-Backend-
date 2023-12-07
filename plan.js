@@ -1,5 +1,5 @@
+//Plan schema
 const mongoose = require("mongoose");
-
 const planSchema = new mongoose.Schema({
   age: Number,
   gender: String,
